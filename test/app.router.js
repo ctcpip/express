@@ -1113,4 +1113,74 @@ describe('app.router', function(){
     var app = express();
     assert.strictEqual(app.get('/', function () {}), app)
   })
+
+  it('should use the default max url length', function(done){
+    var app = express();
+    var router = new express.Router();
+    var cb = after(2, done)
+
+    router.use(function(req, res) {
+      res.statusCode = 200;
+      res.end('yee');
+    });
+
+    app.use(router);
+
+    request(app)
+    .get('/shortURL')
+    .expect(200, cb);
+
+    var sb = ['/'];
+
+    for (var i = 0; i < 2050; i++) {
+      sb.push('0');
+    }
+
+    var longURL = sb.join('');
+
+    request(app)
+    .get(longURL)
+    .expect(414, cb);
+  })
+
+  it('should use a custom max url length if specified', function(done){
+    var app = express();
+    app.set('maxURLLength', 5000);
+    var router = new express.Router({ maxURLLength: 4096 });
+    var cb = after(3, done)
+
+    router.use(function(req, res) {
+      res.statusCode = 200;
+      res.end('yee');
+    });
+
+    app.use(router);
+
+    request(app)
+    .get('/shortURL')
+    .expect(200, cb);
+
+    var sb = ['/'];
+
+    for (var i = 0; i < 2050; i++) {
+      sb.push('0');
+    }
+
+    var longURL = sb.join('');
+
+    request(app)
+    .get(longURL)
+    .expect(200, cb);
+
+    for (var i = 0; i < 2050; i++) {
+      sb.push('1');
+    }
+
+    var evenLongerURL = sb.join('');
+
+    request(app)
+    .get(evenLongerURL)
+    .expect(414, cb);
+
+  })
 })
