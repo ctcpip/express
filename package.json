@@ -89,6 +89,7 @@
     "lib/"
   ],
   "scripts": {
+    "debug-test": "npm test -- --timeout 0",
     "lint": "eslint .",
     "test": "mocha --require test/support/env --reporter spec --bail --check-leaks test/ test/acceptance/",
     "test-ci": "nyc --reporter=lcovonly --reporter=text npm test",
