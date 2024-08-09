@@ -1130,6 +1130,53 @@ describe('app.router', function(){
     var app = express();
     assert.strictEqual(app.get('/', function () {}), app)
   })
+
+  it('should use native regexp engine if specified in app settings', function(done){
+    var app = express();
+    var router;
+
+    router = new express.Router({ useNativeRegExpEngine: true });
+    assert.strictEqual(router.useNativeRegExpEngine, true);
+
+    router = new express.Router();
+    assert.strictEqual(router.useNativeRegExpEngine, false);
+
+    app.set('useNativeRegExpEngine', true);
+    assert.strictEqual(router.useNativeRegExpEngine, false);
+
+    router = new express.Router();
+    assert.strictEqual(router.useNativeRegExpEngine, true);
+
+    router.use(function(req, res) {
+      res.statusCode = 200;
+      res.end('yee');
+    });
+
+    app.use(router);
+
+    request(app)
+    .get('/hmmm')
+    .expect(200, done);
+  });
+
+  it('should work if lookaround/backtracking regex is used with native regexp engine', function(done){
+    var app = express();
+    var router;
+
+    router = new express.Router({ useNativeRegExpEngine: true });
+    assert.strictEqual(router.useNativeRegExpEngine, true);
+
+    router.get(/yee-(?=hmmm)/,function(req, res) {
+      res.statusCode = 200;
+      res.end('yee');
+    });
+
+    app.use(router);
+
+    request(app)
+    .get('/yee-hmmm')
+    .expect(200, done);
+  });
 })
 
 function supportsRegexp(source) {

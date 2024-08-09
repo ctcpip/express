@@ -637,4 +637,15 @@ describe('Router', function(){
       });
     });
   });
+
+  it('should fail if lookaround/backtracking regex is used with RE2', function(done){
+    var router = new express.Router();
+    assert.strictEqual(router.useNativeRegExpEngine, false);
+
+    assert.throws(function() {
+      router.get(/yee-(?=hmmm)/, router);
+    });
+
+    done();
+  });
 })
