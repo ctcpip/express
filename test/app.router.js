@@ -1177,6 +1177,16 @@ describe('app.router', function(){
     .get('/yee-hmmm')
     .expect(200, done);
   });
+
+  describe.skip('regex perf', function() {
+    it('re2', function(done) {
+      regexPerf(false, done);
+    });
+
+    it('native', function(done) {
+      regexPerf(true, done);
+    });
+  });
 })
 
 function supportsRegexp(source) {
@@ -1186,4 +1196,39 @@ function supportsRegexp(source) {
   } catch (e) {
     return false
   }
+}
+
+function regexPerf(useNativeRegExpEngine, done){
+  var app = express();
+  var router;
+
+  router = new express.Router({ useNativeRegExpEngine: useNativeRegExpEngine });
+  assert.strictEqual(router.useNativeRegExpEngine, useNativeRegExpEngine);
+
+  router.get(/yee-hmmm/,function(req, res) {
+    res.statusCode = 200;
+    res.end('yee');
+  });
+
+  app.use(router);
+
+  var requestCount = 1000;
+  var i = 0;
+
+  function doRequest() {
+    if (i < requestCount) {
+      request(app)
+        .get('/yee-hmmm')
+        .expect(200, function(err) {
+          if (err) return done(err);
+          i++;
+          process.nextTick(doRequest);
+        });
+    }
+    else {
+      done();
+    }
+  }
+
+  doRequest();
 }
