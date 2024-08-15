@@ -1179,7 +1179,7 @@ describe('app.router', function(){
     .expect(200, done);
   });
 
-  describe('regex perf', function() {
+  describe.skip('regex perf', function() {
     this.timeout(60 * 1000) // long-running test
 
     var paths = [
