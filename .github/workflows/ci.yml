@@ -75,7 +75,7 @@ jobs:
             npm-version: "npm@2.15.1"
 
           - node-version: "0.12"
-            npm-i: "mocha@3.5.3 nyc@10.3.2 supertest@2.0.0"
+            npm-i: "mocha@3.5.3 supertest@2.0.0"
             npm-version: "npm@2.15.11"
 
           - node-version: "4"
@@ -148,16 +148,22 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          npm run test-ci
-          cp coverage/lcov.info "coverage/${{ matrix.node-version }}.lcov"
+          if [ "${{ matrix.node-version }}" == "0.12" ]; then
+            npm test
+          else
+            npm run test-ci
+            cp coverage/lcov.info "coverage/${{ matrix.node-version }}.lcov"
+          fi
 
       - name: Collect code coverage
+        if: ${{ matrix.npm-i != '0.12' }}
         run: |
           mv ./coverage "./${{ matrix.node-version }}"
           mkdir ./coverage
           mv "./${{ matrix.node-version }}" "./coverage/${{ matrix.node-version }}"
 
       - name: Upload code coverage
+        if: ${{ matrix.npm-i != '0.12' }}
         uses: actions/upload-artifact@v3
         with:
           name: coverage
