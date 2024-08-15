@@ -1145,7 +1145,8 @@ describe('app.router', function(){
     assert.strictEqual(router.useNativeRegExpEngine, false);
 
     router = new express.Router();
-    assert.strictEqual(router.useNativeRegExpEngine, true);
+    // per established design for Router options, application level settings are not inherited upon instantiation
+    assert.strictEqual(router.useNativeRegExpEngine, false);
 
     router.use(function(req, res) {
       res.statusCode = 200;
@@ -1178,13 +1179,34 @@ describe('app.router', function(){
     .expect(200, done);
   });
 
-  describe.skip('regex perf', function() {
-    it('re2', function(done) {
-      regexPerf(false, done);
-    });
+  describe('regex perf', function() {
 
-    it('native', function(done) {
-      regexPerf(true, done);
+    var paths = [
+      [/yee-hmmm/, '/yee-hmmm'],
+      ['/:path.:ext', '/yee.mjs'],
+      ['/:path-:ext', '/yee-cjs'],
+      ['/:path\\(:ext\\)', '/yee(hmmm)'],
+      ['/:path|:ext|', '/yee'],
+      ['/:foo/:bar-:baz', '/yee/hmm-mm'],
+      ['/:foo/:bar-:baz/:qux', '/yee/hmm-mm/mmm'],
+      ['/:foo/:bar.json.:ext', '/yee/hmmm.json.biscuits'],
+      ['/*/:bar/*', '/yee/hmmm/biscuits'],
+      ['/@:foo-:baz@', '/@yee-hmm@'],
+      ['/:foo/:bar?/:baz', '/yee/hmm/biscuits'],
+      ['/user(s)?/:id', '/users/312'],
+      [/yee-hmmm/, '/yee-hmmm'],
+    ];
+
+    paths.forEach(function(p) {
+      var pathName = pad(p[0], 21);
+
+      it('RE2     ' + pathName, function(done) {
+        regexPerf(false, p, done);
+      });
+
+      it('native  ' + pathName, function(done) {
+        regexPerf(true, p, done);
+      });
     });
   });
 })
@@ -1198,14 +1220,14 @@ function supportsRegexp(source) {
   }
 }
 
-function regexPerf(useNativeRegExpEngine, done){
+function regexPerf(useNativeRegExpEngine, path, done){
   var app = express();
   var router;
 
   router = new express.Router({ useNativeRegExpEngine: useNativeRegExpEngine });
   assert.strictEqual(router.useNativeRegExpEngine, useNativeRegExpEngine);
 
-  router.get(/yee-hmmm/,function(req, res) {
+  router.get(path[0], function(req, res) {
     res.statusCode = 200;
     res.end('yee');
   });
@@ -1218,7 +1240,7 @@ function regexPerf(useNativeRegExpEngine, done){
   function doRequest() {
     if (i < requestCount) {
       request(app)
-        .get('/yee-hmmm')
+        .get(path[1])
         .expect(200, function(err) {
           if (err) return done(err);
           i++;
@@ -1231,4 +1253,8 @@ function regexPerf(useNativeRegExpEngine, done){
   }
 
   doRequest();
+}
+
+function pad(str, length){
+  return str + new Array(length - str.toString().length + 1).join(' ');
 }
