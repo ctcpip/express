@@ -643,12 +643,11 @@ describe('Router', function(){
     var router = new express.Router();
     assert.strictEqual(router.useNativeRegExpEngine, false);
 
-    assert.throws(function() {
+    try { // can't use assert.throws() here due to old versions of node/mocha not liking the exception
       router.get('/yee-(?=hmmm)/', router);
-    },
-    {
-      message: 'error parsing regexp: invalid or unsupported Perl syntax: `(?=`',
-    });
+    } catch (error) {
+      assert.strictEqual(error.message, 'error parsing regexp: invalid or unsupported Perl syntax: `(?=`')
+    }
 
     done();
   });
