@@ -339,13 +339,13 @@ describe('express.static()', function () {
       it('should 400 when URL malformed', function (done) {
         request(this.app)
           .get('/%')
-          .expect(400, /BadRequestError/, done)
+          .expect(400, /BadRequestError|Error: Bad Request/, done)
       })
 
       it('should 403 when traversing past root', function (done) {
         request(this.app)
           .get('/users/../../todo.txt')
-          .expect(403, /ForbiddenError/, done)
+          .expect(403, /ForbiddenError|Error: Forbidden/, done)
       })
 
       it('should 404 when URL too long', function (done) {
@@ -394,7 +394,7 @@ describe('express.static()', function () {
         it('should 404 when directory without slash', function (done) {
           request(this.app)
             .get('/pets')
-            .expect(404, /NotFoundError|ENOENT/, done)
+            .expect(404, /NotFoundError|Error: Not Found|ENOENT/, done)
         })
       })
     })
