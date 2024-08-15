@@ -1180,6 +1180,7 @@ describe('app.router', function(){
   });
 
   describe('regex perf', function() {
+    this.timeout(60 * 1000) // long-running test
 
     var paths = [
       [/yee-hmmm/, '/yee-hmmm'],

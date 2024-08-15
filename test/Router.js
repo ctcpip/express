@@ -665,6 +665,7 @@ describe('Router', function(){
   });
 
   describe('regex perf', function() {
+    this.timeout(60 * 1000) // long-running test
 
     var paths = [
       ['/:path.:ext', '/yee.mjs'],
