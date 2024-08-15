@@ -4,7 +4,8 @@ var after = require('after');
 var express = require('../')
   , request = require('supertest')
   , assert = require('assert')
-  , methods = require('methods');
+  , methods = require('methods')
+  , regExpEngineEnum = require('../lib/router/regexp-engine-enum');
 
 var shouldSkipQuery = require('./support/utils').shouldSkipQuery
 
@@ -1135,18 +1136,18 @@ describe('app.router', function(){
     var app = express();
     var router;
 
-    router = new express.Router({ useNativeRegExpEngine: true });
-    assert.strictEqual(router.useNativeRegExpEngine, true);
+    router = new express.Router({ regExpEngine: regExpEngineEnum.NATIVE });
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.NATIVE);
 
     router = new express.Router();
-    assert.strictEqual(router.useNativeRegExpEngine, false);
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
 
-    app.set('useNativeRegExpEngine', true);
-    assert.strictEqual(router.useNativeRegExpEngine, false);
+    app.set('regexp engine', true);
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
 
     router = new express.Router();
     // per established design for Router options, application level settings are not inherited upon instantiation
-    assert.strictEqual(router.useNativeRegExpEngine, false);
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
 
     router.use(function(req, res) {
       res.statusCode = 200;
@@ -1164,8 +1165,8 @@ describe('app.router', function(){
     var app = express();
     var router;
 
-    router = new express.Router({ useNativeRegExpEngine: true });
-    assert.strictEqual(router.useNativeRegExpEngine, true);
+    router = new express.Router({ regExpEngine: regExpEngineEnum.NATIVE });
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.NATIVE);
 
     router.get(/yee-(?=hmmm)/,function(req, res) {
       res.statusCode = 200;
@@ -1221,12 +1222,12 @@ function supportsRegexp(source) {
   }
 }
 
-function regexPerf(useNativeRegExpEngine, path, done){
+function regexPerf(regExpEngine, path, done){
   var app = express();
   var router;
 
-  router = new express.Router({ useNativeRegExpEngine: useNativeRegExpEngine });
-  assert.strictEqual(router.useNativeRegExpEngine, useNativeRegExpEngine);
+  router = new express.Router({ regExpEngine: regExpEngine });
+  assert.strictEqual(router.regExpEngine, regExpEngine);
 
   router.get(path[0], function(req, res) {
     res.statusCode = 200;

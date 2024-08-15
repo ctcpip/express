@@ -5,7 +5,8 @@ var express = require('../')
   , Router = express.Router
   , Layer = require('../lib/router/layer')
   , methods = require('methods')
-  , assert = require('assert');
+  , assert = require('assert')
+  , regExpEngineEnum = require('../lib/router/regexp-engine-enum');
 
 describe('Router', function(){
   it('should return a function with router methods', function() {
@@ -641,7 +642,7 @@ describe('Router', function(){
 
   it('should fail if lookaround/backtracking string is used with RE2', function(done){
     var router = new express.Router();
-    assert.strictEqual(router.useNativeRegExpEngine, false);
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
 
     try { // can't use assert.throws() here due to old versions of node/mocha not liking the exception
       router.get('/yee-(?=hmmm)/', router);
@@ -654,7 +655,7 @@ describe('Router', function(){
 
   it('should succeed if lookaround/backtracking regex is supplied directly via RegExp because it will use the native regex engine despite the global/router setting', function(done){
     var router = new express.Router();
-    assert.strictEqual(router.useNativeRegExpEngine, false);
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
 
     assert.doesNotThrow(function() {
       router.get(/yee-(?=hmmm)/, router);
@@ -695,9 +696,9 @@ describe('Router', function(){
   });
 })
 
-function regexPerf(useNativeRegExpEngine, path, done){
-  var layer = new Layer(path[0], { useNativeRegExpEngine: useNativeRegExpEngine }, function(){});
-  assert.strictEqual(layer.useNativeRegExpEngine, path[0] instanceof RegExp || useNativeRegExpEngine);
+function regexPerf(regExpEngine, path, done){
+  var layer = new Layer(path[0], { regExpEngine: regExpEngine }, function(){});
+  assert.strictEqual(layer.regExpEngine, path[0] instanceof RegExp || regExpEngineEnum.NATIVE);
 
   var requestCount = 10 * 1000;
 
