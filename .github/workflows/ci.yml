@@ -156,14 +156,14 @@ jobs:
           fi
 
       - name: Collect code coverage
-        if: ${{ matrix.npm-i != '0.12' }}
+        if: ${{ matrix.node-version != '0.12' }}
         run: |
           mv ./coverage "./${{ matrix.node-version }}"
           mkdir ./coverage
           mv "./${{ matrix.node-version }}" "./coverage/${{ matrix.node-version }}"
 
       - name: Upload code coverage
-        if: ${{ matrix.npm-i != '0.12' }}
+        if: ${{ matrix.node-version != '0.12' }}
         uses: actions/upload-artifact@v3
         with:
           name: coverage
