@@ -1142,7 +1142,7 @@ describe('app.router', function(){
     router = new express.Router();
     assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
 
-    app.set('regexp engine', true);
+    app.set('regexp engine', regExpEngineEnum.NATIVE);
     assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
 
     router = new express.Router();
