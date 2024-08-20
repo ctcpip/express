@@ -1248,8 +1248,7 @@ function regexPerf(regExpEngine, path, done){
           i++;
           process.nextTick(doRequest);
         });
-    }
-    else {
+    } else {
       done();
     }
   }
