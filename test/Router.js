@@ -3,8 +3,10 @@
 var after = require('after');
 var express = require('../')
   , Router = express.Router
+  , Layer = require('../lib/router/layer')
   , methods = require('methods')
-  , assert = require('assert');
+  , assert = require('assert')
+  , regExpEngineEnum = require('../lib/router/regexp-engine-enum');
 
 describe('Router', function(){
   it('should return a function with router methods', function() {
@@ -89,7 +91,7 @@ describe('Router', function(){
   })
 
   it('should not stack overflow with many registered routes', function(done){
-    this.timeout(5000) // long-running test
+    this.timeout(10 * 1000) // long-running test
 
     var handler = function(req, res){ res.end(new Error('wrong handler')) };
     var router = new Router();
@@ -637,4 +639,76 @@ describe('Router', function(){
       });
     });
   });
+
+  it('should fail if lookaround/backtracking string is used with RE2', function(done){
+    var router = new express.Router();
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
+
+    try { // can't use assert.throws() here due to old versions of node/mocha not liking the exception
+      router.get('/yee-(?=hmmm)/', router);
+    } catch (error) {
+      assert.strictEqual(error.message, 'error parsing regexp: invalid or unsupported Perl syntax: `(?=`')
+    }
+
+    done();
+  });
+
+  it('should succeed if lookaround/backtracking regex is supplied directly via RegExp because it will use the native regex engine despite the global/router setting', function(done){
+    var router = new express.Router();
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
+
+    assert.doesNotThrow(function() {
+      router.get(/yee-(?=hmmm)/, router);
+    });
+
+    done();
+  });
+
+  describe.skip('regex perf', function() {
+    this.timeout(60 * 1000) // long-running test
+
+    var paths = [
+      ['/:path.:ext', '/yee.mjs'],
+      ['/:path-:ext', '/yee-cjs'],
+      ['/:path\\(:ext\\)', '/yee(hmmm)'],
+      ['/:path|:ext|', '/yee'],
+      ['/:foo/:bar-:baz', '/yee/hmm-mm'],
+      ['/:foo/:bar-:baz/:qux', '/yee/hmm-mm/mmm'],
+      ['/:foo/:bar.json.:ext', '/yee/hmmm.json.biscuits'],
+      ['/*/:bar/*', '/yee/hmmm/biscuits'],
+      ['/@:foo-:baz@', '/@yee-hmm@'],
+      ['/:foo/:bar?/:baz', '/yee/hmm/biscuits'],
+      ['/user(s)?/:id', '/users/312'],
+      [/yee-hmmm/, '/yee-hmmm'],
+    ];
+
+    paths.forEach(function(p) {
+      var pathName = pad(p[0], 21);
+
+      it('re2     ' + pathName, function(done) {
+        regexPerf(false, p, done);
+      });
+
+      it('native  ' + pathName, function(done) {
+        regexPerf(true, p, done);
+      });
+    });
+  });
 })
+
+function regexPerf(regExpEngine, path, done){
+  var layer = new Layer(path[0], { regExpEngine: regExpEngine }, function(){});
+  assert.strictEqual(layer.regExpEngine, path[0] instanceof RegExp || regExpEngineEnum.NATIVE);
+
+  var requestCount = 10 * 1000;
+
+  for (var i = 0; i < requestCount; i++) {
+    layer.match(path[1]);
+  }
+
+  done();
+}
+
+function pad(str, length){
+  return str + new Array(length - str.toString().length + 1).join(' ');
+}

@@ -4,7 +4,8 @@ var after = require('after');
 var express = require('../')
   , request = require('supertest')
   , assert = require('assert')
-  , methods = require('methods');
+  , methods = require('methods')
+  , regExpEngineEnum = require('../lib/router/regexp-engine-enum');
 
 var shouldSkipQuery = require('./support/utils').shouldSkipQuery
 
@@ -1130,6 +1131,86 @@ describe('app.router', function(){
     var app = express();
     assert.strictEqual(app.get('/', function () {}), app)
   })
+
+  it('should use native regexp engine if specified in app settings', function(done){
+    var app = express();
+    var router;
+
+    router = new express.Router({ regExpEngine: regExpEngineEnum.NATIVE });
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.NATIVE);
+
+    router = new express.Router();
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
+
+    app.set('regexp engine', regExpEngineEnum.NATIVE);
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
+
+    router = new express.Router();
+    // per established design for Router options, application level settings are not inherited upon instantiation
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.RE2JS);
+
+    router.use(function(req, res) {
+      res.statusCode = 200;
+      res.end('yee');
+    });
+
+    app.use(router);
+
+    request(app)
+    .get('/hmmm')
+    .expect(200, done);
+  });
+
+  it('should work if lookaround/backtracking regex is used with native regexp engine', function(done){
+    var app = express();
+    var router;
+
+    router = new express.Router({ regExpEngine: regExpEngineEnum.NATIVE });
+    assert.strictEqual(router.regExpEngine, regExpEngineEnum.NATIVE);
+
+    router.get(/yee-(?=hmmm)/,function(req, res) {
+      res.statusCode = 200;
+      res.end('yee');
+    });
+
+    app.use(router);
+
+    request(app)
+    .get('/yee-hmmm')
+    .expect(200, done);
+  });
+
+  describe.skip('regex perf', function() {
+    this.timeout(60 * 1000) // long-running test
+
+    var paths = [
+      [/yee-hmmm/, '/yee-hmmm'],
+      ['/:path.:ext', '/yee.mjs'],
+      ['/:path-:ext', '/yee-cjs'],
+      ['/:path\\(:ext\\)', '/yee(hmmm)'],
+      ['/:path|:ext|', '/yee'],
+      ['/:foo/:bar-:baz', '/yee/hmm-mm'],
+      ['/:foo/:bar-:baz/:qux', '/yee/hmm-mm/mmm'],
+      ['/:foo/:bar.json.:ext', '/yee/hmmm.json.biscuits'],
+      ['/*/:bar/*', '/yee/hmmm/biscuits'],
+      ['/@:foo-:baz@', '/@yee-hmm@'],
+      ['/:foo/:bar?/:baz', '/yee/hmm/biscuits'],
+      ['/user(s)?/:id', '/users/312'],
+      [/yee-hmmm/, '/yee-hmmm'],
+    ];
+
+    paths.forEach(function(p) {
+      var pathName = pad(p[0], 21);
+
+      it('RE2     ' + pathName, function(done) {
+        regexPerf(false, p, done);
+      });
+
+      it('native  ' + pathName, function(done) {
+        regexPerf(true, p, done);
+      });
+    });
+  });
 })
 
 function supportsRegexp(source) {
@@ -1139,4 +1220,42 @@ function supportsRegexp(source) {
   } catch (e) {
     return false
   }
+}
+
+function regexPerf(regExpEngine, path, done){
+  var app = express();
+  var router;
+
+  router = new express.Router({ regExpEngine: regExpEngine });
+  assert.strictEqual(router.regExpEngine, regExpEngine);
+
+  router.get(path[0], function(req, res) {
+    res.statusCode = 200;
+    res.end('yee');
+  });
+
+  app.use(router);
+
+  var requestCount = 1000;
+  var i = 0;
+
+  function doRequest() {
+    if (i < requestCount) {
+      request(app)
+        .get(path[1])
+        .expect(200, function(err) {
+          if (err) return done(err);
+          i++;
+          process.nextTick(doRequest);
+        });
+    } else {
+      done();
+    }
+  }
+
+  doRequest();
+}
+
+function pad(str, length){
+  return str + new Array(length - str.toString().length + 1).join(' ');
 }
